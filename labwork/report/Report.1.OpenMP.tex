@@ -2,7 +2,33 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
+\title{Report of the Labwork 1}
+\author{Diochot David}
+
 \begin{document}
-Il était une fois dans une lointaine galaxie...
+
+
+
+\section{How I implemented the conversion}
+
+I take the code of the first version of the Labwork 1 and decided to parallelize the first
+loop with the command : 
+\begin{verbatim}
+    #pragma omp parallel for
+\end{verbatim}
+
+\section{the Spead Up}
+
+After the parallelization, the program runs 4 times faster than the sequential version.
+
+\begin{verbatim}
+    labwork 1 CPU ellapsed 3662.9ms
+    labwork 1 ellapsed 732.0ms
+\end{verbatim}
+
+
+
+
+
 \end{document}
 
