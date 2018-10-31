@@ -171,19 +171,16 @@ void Labwork::labwork3_GPU() {
 	int pixelCount = inputImage->width * inputImage->height;
 	uchar3 *devInput;
 	uchar3 *devGray;
-	outputImage = (char*) malloc(pixelCount * sizeof(char) * 3);
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
 	cudaMalloc(&devInput, pixelCount * sizeof(uchar3));
 	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
 	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
 	// execute the grayscale transformation on device
-	int dimBlock = 64;
+	int dimBlock = 16;
 	int dimGrid = pixelCount / dimBlock;
 	grayscale<<<dimGrid, dimBlock>>>(devInput, devGray);
-	printf(" grayscale done \n");
-	printf(" check size : %d  --- %d \n",sizeof(char),sizeof(uchar3));
 	// copy result from device to host
 	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
-	printf(" copy done\n");
 	// free memory
 	cudaFree(devInput);
 	cudaFree(devGray);
