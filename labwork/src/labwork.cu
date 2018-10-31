@@ -160,8 +160,33 @@ void Labwork::labwork2_GPU() {
    }
 }
 
+__global__ void grayscale(uchar3 *input, uchar3 *output) {
+	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+	output[tid].x = (input[tid].x + input[tid].y + input[tid].z) / 3;
+	output[tid].z = output[tid].y = output[tid].x;
+}
+
 void Labwork::labwork3_GPU() {
-   
+	// copy image from host memory to device memory
+	int pixelCount = inputImage->width * inputImage->height;
+	uchar3 *devInput;
+	uchar3 *devGray;
+	outputImage = (char*) malloc(pixelCount * sizeof(char) * 3);
+	cudaMalloc(&devInput, pixelCount * sizeof(uchar3));
+	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
+	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
+	// execute the grayscale transformation on device
+	int dimBlock = 64;
+	int dimGrid = pixelCount / dimBlock;
+	grayscale<<<dimGrid, dimBlock>>>(devInput, devGray);
+	printf(" grayscale done \n");
+	printf(" check size : %d  --- %d \n",sizeof(char),sizeof(uchar3));
+	// copy result from device to host
+	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
+	printf(" copy done\n");
+	// free memory
+	cudaFree(devInput);
+	cudaFree(devGray);
 }
 
 void Labwork::labwork4_GPU() {
