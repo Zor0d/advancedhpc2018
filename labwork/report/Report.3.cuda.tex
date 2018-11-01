@@ -1,0 +1,39 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\title{Report of the Labwork 3}
+\author{Diochot David}
+
+\begin{document}
+
+% Title
+\begin{center}
+    { \huge \bfseries Report of Labwork 3 \\[0.4cm] }
+\end{center}
+
+
+\section{How I implemented the Labwork}
+
+I declared the devInput, devGray then used cudaMalloc to allocate memory.
+I copied the image from $  inputImgape->buffer $ (host) to devInput 
+
+
+\section{The speed up}
+
+With a blockSize of 64 this version of the program runs 8 times faster than the parallelized 
+version with OpenMP. \\
+
+This version runs in : \\
+\begin{itemize}
+    \item 101 ms with blockSize = 16
+    \item 101 ms with blockSize = 32
+    \item 93 ms with blockSize = 64
+    \item 113 ms with blockSize = 1024
+\end{itemize}
+    
+
+
+
+\end{document}
+

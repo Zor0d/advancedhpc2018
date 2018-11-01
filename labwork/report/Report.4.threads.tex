@@ -1,0 +1,53 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{minted}
+
+\title{Report of the Labwork 4}
+\author{Diochot David}
+
+\begin{document}
+
+% Title
+\begin{center}
+    { \huge \bfseries Report of Labwork 4 \\[0.4cm] }
+\end{center}
+
+
+\section{How I implemented the Labwork}  
+
+First I fixed the blockSize at (32, 32) then I calculate the gridSize according to the size of the Image and 
+the block.
+
+\begin{minted}{c}
+int blockSize_1D = 32;
+dim3 gridSize = dim3(inputImage->width / blockSize_1D, inputImage->height / blockSize_1D);
+dim3 blockSize = dim3(blockSize_1D, blockSize_1D);
+\end{minted}
+
+We use the width of the image to determine the position of the current pixel calculated.
+
+\begin{minted}{c}
+int id = tid_x+tid_y*width;
+output[id].x = (input[id].x + input[id].y + input[id].z) / 3;
+output[id].z = output[id].y = output[id].x;
+\end{minted}
+
+
+\section{The speed up}
+
+This version is a little bit fatser than the previous one. The previous Labwork runs in 100 ms in average,
+this verion runs in 92 ms in average.
+
+This version runs in : \\
+\begin{itemize}
+    \item 92 ms with blockSize = (32, 32)
+    \item 95 ms with blockSize = (16, 16)
+    \item 100 ms with blockSize = (8, 8)
+\end{itemize}
+    
+
+
+
+\end{document}
+
