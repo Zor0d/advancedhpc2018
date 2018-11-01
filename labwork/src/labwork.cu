@@ -186,8 +186,32 @@ void Labwork::labwork3_GPU() {
 	cudaFree(devGray);
 }
 
+__global__ void grayscale2D(uchar3 *input, uchar3 *output) {
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+	int rowLength = gridDim.x * blockDim.x;
+	int id = tid_x+tid_y*rowLength;
+	output[id].x = (input[id].x + input[id].y + input[id].z) / 3;
+	output[id].z = output[id].y = output[id].x;
+}
 void Labwork::labwork4_GPU() {
-   
+    // copy image from host memory to device memory
+	int pixelCount = inputImage->width * inputImage->height;
+	uchar3 *devInput;
+	uchar3 *devGray;
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
+	cudaMalloc(&devInput, pixelCount * sizeof(uchar3));
+	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
+	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
+	// execute the grayscale transformation on device
+	dim3 gridSize = dim3(inputImage->width / 32, inputImage->height / 32);
+	dim3 blockSize = dim3(32, 32);
+	grayscale2D<<<gridSize, blockSize>>>(devInput, devGray);
+	// copy result from device to host
+	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
+	// free memory
+	cudaFree(devInput);
+	cudaFree(devGray);
 }
 
 // CPU implementation of Gaussian Blur
