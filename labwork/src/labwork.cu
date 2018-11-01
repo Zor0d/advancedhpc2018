@@ -176,7 +176,7 @@ void Labwork::labwork3_GPU() {
 	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
 	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
 	// execute the grayscale transformation on device
-	int dimBlock = 16;
+	int dimBlock = 1024;
 	int dimGrid = pixelCount / dimBlock;
 	grayscale<<<dimGrid, dimBlock>>>(devInput, devGray);
 	// copy result from device to host
@@ -186,11 +186,10 @@ void Labwork::labwork3_GPU() {
 	cudaFree(devGray);
 }
 
-__global__ void grayscale2D(uchar3 *input, uchar3 *output) {
+__global__ void grayscale2D(uchar3 *input, uchar3 *output, int width) {
 	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
-	int rowLength = gridDim.x * blockDim.x;
-	int id = tid_x+tid_y*rowLength;
+	int id = tid_x+tid_y*width;
 	output[id].x = (input[id].x + input[id].y + input[id].z) / 3;
 	output[id].z = output[id].y = output[id].x;
 }
@@ -204,9 +203,10 @@ void Labwork::labwork4_GPU() {
 	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
 	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
 	// execute the grayscale transformation on device
-	dim3 gridSize = dim3(inputImage->width / 32, inputImage->height / 32);
-	dim3 blockSize = dim3(32, 32);
-	grayscale2D<<<gridSize, blockSize>>>(devInput, devGray);
+	int blockSize_1D = 32;
+	dim3 gridSize = dim3(inputImage->width / blockSize_1D, inputImage->height / blockSize_1D);
+	dim3 blockSize = dim3(blockSize_1D, blockSize_1D);
+	grayscale2D<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width);
 	// copy result from device to host
 	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
 	// free memory
