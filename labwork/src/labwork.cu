@@ -269,7 +269,7 @@ __global__ void blur(uchar3 *input, uchar3 *output, int width, int height, int *
 			if (j < 0) return;
 			if (j >= height) return;
 			int tid = j * width + i;
-			int coefficient = kernel[(y+3) * 7 + x + 3];
+			int coefficient = kernel[(y+3)*7+x+3];
 			//printf(" coefficient : %d\n", coefficient); 
 			unsigned char gray = (input[tid].x + input[tid].y + input[tid].z)/3;
 			sum = sum + gray * coefficient;
@@ -277,10 +277,39 @@ __global__ void blur(uchar3 *input, uchar3 *output, int width, int height, int *
 		}
 	}
 	sum /= c;
-	int id = tid_x * width + tid_y;
+	int id = tid_x + width * tid_y;
 	output[id].z = output[id].y = output[id].x = sum;
-	printf("nombre de pixels traité : %d\n", nbPixel);
+	//printf("nombre de pixels traité : %d\n", nbPixel);
 }
+
+
+__global__ void blurShared(uchar3 *input, uchar3 *output, int width, int height, int *kernel) {
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (tid_x >= width) return; 
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+	if (tid_y >= height) return; 
+	int sum = 0;
+	int c = 0;
+	for (int y = -3; y <= 3; y++) {
+		for (int x = -3; x <= 3; x++) {
+			int i = tid_x + x;
+			int j = tid_y + y;
+			if (i < 0) return;
+			if (i >= width) return;
+			if (j < 0) return;
+			if (j >= height) return;
+			int tid = j * width + i;
+			int coefficient = kernel[(y+3)*7+x+3];
+			unsigned char gray = (input[tid].x + input[tid].y + input[tid].z)/3;
+			sum = sum + gray * coefficient;
+			c += coefficient;
+		}
+	}
+	sum /= c;
+	int id = tid_x + width * tid_y;
+	output[id].z = output[id].y = output[id].x = sum;
+}
+
 
 void Labwork::labwork5_GPU() {
 	int kernel[] = { 0, 0, 1, 2, 1, 0, 0,  
@@ -298,9 +327,9 @@ void Labwork::labwork5_GPU() {
     outputImage = static_cast<char *>(malloc(pixelCount * 3));
 	cudaMalloc(&devInput, pixelCount * sizeof(uchar3));
 	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
-	cudaMalloc(&devKernel, sizeof(kernel));
+	cudaMalloc(&devKernel, 49*4);
 	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
-	cudaMemcpy(devKernel, kernel, sizeof(kernel),cudaMemcpyHostToDevice);
+	cudaMemcpy(devKernel, kernel, 49*4,cudaMemcpyHostToDevice);
 	// execute the grayscale transformation on device
 	int blockSize_1D = 32;
 	dim3 gridSize = dim3((inputImage->width + blockSize_1D-1) / blockSize_1D, (inputImage->height + blockSize_1D-1) / blockSize_1D);
