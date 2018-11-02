@@ -53,9 +53,13 @@ int main(int argc, char **argv) {
             labwork.saveOutputImage("labwork4-gpu-out.jpg");
             break;
         case 5:
+			timer.start();
             labwork.labwork5_CPU();
+            printf("labwork 5 CPU ellapsed %.1fms\n", lwNum, timer.getElapsedTimeInMilliSec());
             labwork.saveOutputImage("labwork5-cpu-out.jpg");
+            timer.start();
             labwork.labwork5_GPU();
+            printf("labwork 5 GPU ellapsed %.1fms\n", lwNum, timer.getElapsedTimeInMilliSec());
             labwork.saveOutputImage("labwork5-gpu-out.jpg");
             break;
         case 6:
@@ -288,6 +292,15 @@ __global__ void blurShared(uchar3 *input, uchar3 *output, int width, int height,
 	if (tid_x >= width) return; 
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 	if (tid_y >= height) return; 
+	
+	int localtid = threadIdx.x + threadIdx.y * blockDim.x;
+	__shared__ int tile[49];
+	if (localtid<49){
+		tile[localtid] = kernel[localtid];
+	}
+
+	__syncthreads();
+		
 	int sum = 0;
 	int c = 0;
 	for (int y = -3; y <= 3; y++) {
@@ -299,7 +312,7 @@ __global__ void blurShared(uchar3 *input, uchar3 *output, int width, int height,
 			if (j < 0) return;
 			if (j >= height) return;
 			int tid = j * width + i;
-			int coefficient = kernel[(y+3)*7+x+3];
+			int coefficient = tile[(y+3)*7+x+3];
 			unsigned char gray = (input[tid].x + input[tid].y + input[tid].z)/3;
 			sum = sum + gray * coefficient;
 			c += coefficient;
@@ -334,7 +347,7 @@ void Labwork::labwork5_GPU() {
 	int blockSize_1D = 32;
 	dim3 gridSize = dim3((inputImage->width + blockSize_1D-1) / blockSize_1D, (inputImage->height + blockSize_1D-1) / blockSize_1D);
 	dim3 blockSize = dim3(blockSize_1D, blockSize_1D);
-	blur<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, devKernel);
+	blurShared<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, devKernel);
 	// copy result from device to host
 	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
 	// free memory
