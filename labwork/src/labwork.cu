@@ -355,8 +355,65 @@ void Labwork::labwork5_GPU() {
 	cudaFree(devGray);
 }
 
-void Labwork::labwork6_GPU() {
+__global__ void grayscaleBinarization(uchar3 *input, uchar3 *output, int width, int height, int cutValue) {
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (tid_x >= width) return; 
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+	if (tid_y >= height) return; 
+	int id = tid_x+tid_y*width;
+	int value = (input[id].x + input[id].y + input[id].z) / 3;
+	output[id].z = output[id].y = output[id].x = (value/cutValue)*255;
+}
 
+__global__ void grayscaleBrightModification(uchar3 *input, uchar3 *output, int width, int height, int brightValue) {
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (tid_x >= width) return; 
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+	if (tid_y >= height) return; 
+	int id = tid_x+tid_y*width;
+	int value = (input[id].x + input[id].y + input[id].z) / 3;
+	output[id].z = output[id].y = output[id].x = (value + brightValue);
+}
+
+void Labwork::labwork6_GPU() {
+	// copy image from host memory to device memory
+	int pixelCount = inputImage->width * inputImage->height;
+	uchar3 *devInput;
+	uchar3 *devGray;
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
+	cudaMalloc(&devInput, pixelCount * sizeof(uchar3));
+	cudaMalloc(&devGray, pixelCount * sizeof(uchar3));
+	cudaMemcpy(devInput, inputImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
+	// execute the grayscale transformation on device
+	int blockSize_1D = 32;
+	dim3 gridSize = dim3((inputImage->width + blockSize_1D-1) / blockSize_1D, (inputImage->height + blockSize_1D-1) / blockSize_1D);
+	dim3 blockSize = dim3(blockSize_1D, blockSize_1D);
+	int choice;
+	printf("Veuillez choisir l'opération souhaitée :\n");
+	printf("1) binarization \n");
+	printf("2) brightness increase\n");
+	printf("3) \n");
+	scanf("%d",&choice);
+	if (choice==1){
+		int cutValue;
+		printf("Veuillez indiquer un seuil :");
+		scanf("%d", &cutValue);
+		grayscaleBinarization<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, cutValue);
+	}else if (choice==2){
+		int brightValue;
+		printf("Veuillez indiquerl'intensité à ajouter :");
+		scanf("%d", &brightValue);
+		grayscaleBrightModification<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, brightValue);	
+	}else if (choice==3){
+		
+	}else{
+		
+	}
+	// copy result from device to host
+	cudaMemcpy(outputImage, devGray,pixelCount * sizeof(uchar3),cudaMemcpyDeviceToHost);
+	// free memory
+	cudaFree(devInput);
+	cudaFree(devGray);
 }
 
 void Labwork::labwork7_GPU() {
