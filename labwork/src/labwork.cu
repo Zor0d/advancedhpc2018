@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv) {
     printf("USTH ICT Master 2018, Advanced Programming for HPC.\n");
-    if (argc < 2) {
+    if (argc < 3) {
         printf("Usage: labwork <lwNum> <inputImage>\n");
         printf("   lwNum        labwork number\n");
         printf("   inputImage   the input file name, in JPEG format\n");
@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
         inputFilename = std::string(argv[2]);
         labwork.loadInputImage(inputFilename);
     }
+
 
     printf("Starting labwork %d\n", lwNum);
     Timer timer;
@@ -365,14 +366,27 @@ __global__ void grayscaleBinarization(uchar3 *input, uchar3 *output, int width, 
 	output[id].z = output[id].y = output[id].x = (value/cutValue)*255;
 }
 
-__global__ void grayscaleBrightModification(uchar3 *input, uchar3 *output, int width, int height, int brightValue) {
+__global__ void grayscaleBrightControl(uchar3 *input, uchar3 *output, int width, int height, int brightValue) {
 	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
 	if (tid_x >= width) return; 
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 	if (tid_y >= height) return; 
 	int id = tid_x+tid_y*width;
-	int value = (input[id].x + input[id].y + input[id].z) / 3;
-	output[id].z = output[id].y = output[id].x = (value + brightValue);
+	output[id].x = min(255,max(0,input[id].x+brightValue));
+	output[id].y = min(255,max(0,input[id].y+brightValue));
+	output[id].z = min(255,max(0,input[id].z+brightValue));
+}
+
+__global__ void blend(uchar3 *input, uchar3 *output, int width, int height, int coeff, uchar3 *secondInput) {
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (tid_x >= width) return; 
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+	if (tid_y >= height) return; 
+	int id = tid_x+tid_y*width;
+	output[id].x = input[id].x * coeff + secondInput[id].x * (1-coeff);
+	output[id].y = input[id].y * coeff + secondInput[id].y * (1-coeff);
+	output[id].z = input[id].z * coeff + secondInput[id].z * (1-coeff);
+	
 }
 
 void Labwork::labwork6_GPU() {
@@ -392,20 +406,33 @@ void Labwork::labwork6_GPU() {
 	printf("Veuillez choisir l'opération souhaitée :\n");
 	printf("1) binarization \n");
 	printf("2) brightness increase\n");
-	printf("3) \n");
+	printf("3) bleanding images \n");
 	scanf("%d",&choice);
 	if (choice==1){
 		int cutValue;
-		printf("Veuillez indiquer un seuil :");
+		printf("Veuillez indiquer un seuil : ");
 		scanf("%d", &cutValue);
 		grayscaleBinarization<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, cutValue);
 	}else if (choice==2){
 		int brightValue;
-		printf("Veuillez indiquerl'intensité à ajouter :");
+		printf("Veuillez indiquer l'intensité à ajouter (peut être négative) : ");
 		scanf("%d", &brightValue);
-		grayscaleBrightModification<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, brightValue);	
+		grayscaleBrightControl<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, brightValue);	
 	}else if (choice==3){
-		
+		std::string fileName;
+		int coeff;
+		uchar3 *devSecondImage;
+		JpegInfo *secondImage;
+		printf("Veuillez indiquer le nom de la seconde image : ");
+		scanf("%s", &fileName);
+		secondImage = (JpegInfo*) malloc(pixelCount * sizeof(uchar3));
+		secondImage = jpegLoader.load(fileName);
+		printf("load done \n");
+		cudaMalloc(&devSecondImage, pixelCount * sizeof(uchar3));
+		cudaMemcpy(devSecondImage, secondImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
+		printf("Veuillez indiquer le coefficient choisie :");
+		scanf("%s", &coeff);
+		//blend<<<gridSize, blockSize>>>(devInput, devGray, inputImage->width, inputImage->height, coeff, devSecondImage);
 	}else{
 		
 	}
