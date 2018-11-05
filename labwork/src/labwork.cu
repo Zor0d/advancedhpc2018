@@ -5,6 +5,8 @@
 
 #define ACTIVE_THREADS 4
 
+
+
 int main(int argc, char **argv) {
     printf("USTH ICT Master 2018, Advanced Programming for HPC.\n");
     if (argc < 3) {
@@ -16,6 +18,7 @@ int main(int argc, char **argv) {
 
     int lwNum = atoi(argv[1]);
     std::string inputFilename;
+    std::string secondFilename;
 
     // pre-initialize CUDA to avoid incorrect profiling
     printf("Warming up...\n");
@@ -27,6 +30,12 @@ int main(int argc, char **argv) {
         inputFilename = std::string(argv[2]);
         labwork.loadInputImage(inputFilename);
     }
+    if (lwNum == 6 ) {
+        secondFilename = std::string(argv[3]);
+        labwork.loadInputImage2(secondFilename);
+    }
+    
+    
 
 
     printf("Starting labwork %d\n", lwNum);
@@ -89,6 +98,11 @@ int main(int argc, char **argv) {
 
 void Labwork::loadInputImage(std::string inputFileName) {
     inputImage = jpegLoader.load(inputFileName);
+    secondImage = jpegLoader.load(inputFileName);
+}
+
+void Labwork::loadInputImage2(std::string inputFileName) {
+    secondImage = jpegLoader.load(inputFileName);
 }
 
 void Labwork::saveOutputImage(std::string outputFileName) {
@@ -422,11 +436,10 @@ void Labwork::labwork6_GPU() {
 		std::string fileName;
 		int coeff;
 		uchar3 *devSecondImage;
-		JpegInfo *secondImage;
-		printf("Veuillez indiquer le nom de la seconde image : ");
-		scanf("%s", &fileName);
-		secondImage = (JpegInfo*) malloc(pixelCount * sizeof(uchar3));
-		secondImage = jpegLoader.load(fileName);
+		//printf("Veuillez indiquer le nom de la seconde image : ");
+		//scanf("%s", &fileName);
+		//printf("jpegloader created \n");
+		//secondImage = jpegLoader.load(fileName);
 		printf("load done \n");
 		cudaMalloc(&devSecondImage, pixelCount * sizeof(uchar3));
 		cudaMemcpy(devSecondImage, secondImage->buffer,pixelCount * sizeof(uchar3),cudaMemcpyHostToDevice);
